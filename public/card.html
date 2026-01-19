@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Play On Membership Card - High Contrast</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            /* BRAND COLORS */
+            --lime-green: #32CD32;
+            --forest-green: #006400; /* Darker for text contrast */
+            --bright-yellow: #FFD700;
+            --dark-grey: #1a1a1a;
+            --light-bg: #f8f9fa;
+            
+            /* DIMENSIONS (CR80 Standard) */
+            --card-width: 85.6mm;
+            --card-height: 53.98mm;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #2c3e50;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .no-print { text-align: center; color: white; margin-bottom: 20px; }
+        .print-btn {
+            background: var(--lime-green);
+            color: var(--forest-green);
+            border: none;
+            padding: 10px 20px;
+            font-weight: 800;
+            border-radius: 4px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 4px 0 var(--forest-green);
+        }
+        .print-btn:active { transform: translateY(4px); box-shadow: none; }
+
+        .cards-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* --- SHARED CARD BASE --- */
+        .card-container {
+            width: var(--card-width);
+            height: var(--card-height);
+            border-radius: 3.18mm; /* Standard ID radius */
+            position: relative;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            box-sizing: border-box;
+        }
+
+        /* ============================
+           FRONT CARD DESIGN (Polished)
+           ============================ */
+        .card-front {
+            display: flex;
+            background: white;
+            border: 1px solid #ddd;
+        }
+
+        /* DECORATIVE CURVES */
+        .front-decor-top {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 65%;
+            height: 100%;
+            background: linear-gradient(135deg, transparent 40%, rgba(50, 205, 50, 0.08) 40%);
+            z-index: 0;
+            clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%);
+        }
+        
+        .front-decor-bottom {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(to top right, var(--lime-green), var(--bright-yellow));
+            clip-path: circle(100% at 100% 100%);
+            opacity: 0.2;
+            z-index: 0;
+        }
+
+        /* LEFT SIDE (Photo & QR) */
+        .front-left {
+            width: 36%; /* Slightly narrower to give text space */
+            padding: 4mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            border-right: 1px dashed #ddd; /* Subtle separation */
+        }
+
+        .photo-container {
+            width: 48px;
+            height: 48px;
+            padding: 2px;
+            border: 2px solid var(--lime-green);
+            border-radius: 50%;
+            margin-bottom: 6px;
+            background: white;
+        }
+        .profile-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .qr-container {
+            background: white;
+            padding: 2px;
+        }
+        .qr-img {
+            width: 60px;
+            height: 60px;
+            display: block;
+        }
+
+        /* RIGHT SIDE (Text Data) */
+        .front-right {
+            width: 64%;
+            padding: 4mm 4mm 4mm 3mm; /* Top, Right, Bottom, Left */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 2;
+            position: relative;
+        }
+
+        /* HEADER */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2px;
+            border-bottom: 2px solid var(--lime-green);
+            padding-bottom: 2px;
+        }
+        
+        .brand-title {
+            font-size: 14px;
+            font-weight: 900;
+            color: var(--forest-green);
+            font-style: bold;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+        
+        .card-type {
+            font-size: 6px;
+            font-weight: 700;
+            background: var(--dark-grey);
+            color: var(--bright-yellow);
+            padding: 1px 4px;
+            border-radius: 2px;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        /* DATA FIELDS */
+        .data-row {
+            margin-bottom: 3px;
+        }
+
+        .label {
+            font-size: 6px;
+            color: #888;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0px;
+        }
+
+        .value-primary {
+            font-size: 15px; /* Big Name */
+            font-weight: 800;
+            color: var(--dark-grey);
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+            display: block;
+        }
+        
+        .value-secondary {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--forest-green);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .id-badge {
+            font-family: 'Courier New', monospace;
+            font-size: 9px;
+            font-weight: 700;
+            color: #555;
+            background: #f4f4f4;
+            padding: 1px 4px;
+            border-radius: 3px;
+            display: inline-block;
+            margin-top: 1px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .expiry-box {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .expiry-date {
+            font-size: 10px;
+            font-weight: 800;
+            color: #c0392b; /* Red for expiry to grab attention */
+        }
+
+        /* ============================
+           BACK CARD DESIGN
+           ============================ */
+        .card-back {
+            background: #111;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5mm;
+            text-align: center;
+            border-bottom: 4px solid var(--lime-green); /* Visual anchor */
+        }
+
+        .back-title {
+            font-size: 12px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .back-title span { color: var(--lime-green); }
+
+        .info-list {
+            width: 100%;
+            font-size: 7px;
+            color: #ccc;
+            text-align: left;
+            margin-bottom: 8px;
+        }
+        .info-item {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 3px;
+            align-items: center;
+        }
+        .info-item i { color: var(--lime-green); width: 10px; text-align: center;}
+
+        .schedule-grid {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+            font-size: 6.5px;
+            text-align: left;
+            color: #bbb;
+            border-top: 1px solid #333;
+            padding-top: 5px;
+        }
+        .schedule-col h4 {
+            color: var(--bright-yellow);
+            margin: 0 0 2px 0;
+            font-size: 6.5px;
+        }
+
+        .footer-socials {
+            margin-top: auto;
+            display: flex;
+            gap: 10px;
+            font-size: 8px;
+        }
+        .footer-socials a { color: white; text-decoration: none; }
+        .footer-socials i { color: var(--lime-green); }
+
+        /* PRINT SETTINGS */
+        @media print {
+            body { background: none; margin: 0; padding: 0; display: block; }
+            .no-print { display: none; }
+            .cards-wrapper { flex-direction: row; flex-wrap: wrap; gap: 0; }
+            .card-container {
+                margin: 0 10px 10px 0;
+                box-shadow: none;
+                border: 1px solid #eee; /* Light cutting guide */
+                page-break-inside: avoid;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print">
+        <button onclick="window.print()" class="print-btn">Print Card</button>
+        <div style="font-size: 11px; margin-top: 8px; opacity: 0.7;">Ensure background graphics are enabled in print settings.</div>
+    </div>
+
+    <div class="cards-wrapper">
+        
+        <div class="card-container card-front">
+            <div class="front-decor-top"></div>
+            <div class="front-decor-bottom"></div>
+
+            <div class="front-left">
+                <div class="photo-container">
+                    <img id="photo" class="profile-img" src="" alt="Profile">
+                </div>
+                <div class="qr-container">
+                    <img id="qr" class="qr-img" src="" alt="QR">
+                </div>
+            </div>
+
+            <div class="front-right">
+                <div class="card-header">
+                    <div class="brand-title">PLAY ON MEMBERSHIP CARD</div>
+                    <div class="card-type">MEMBER</div>
+                </div>
+
+                <div class="data-row" style="margin-top: 4px;">
+                    <div class="label">Member Name</div>
+                    <div class="value-primary" id="name">Loading...</div>
+                </div>
+
+                <div class="data-row">
+                    <div class="label">Membership NO.</div>
+                    <div class="id-badge" id="memberId">PO-....</div>
+                </div>
+
+                <div class="data-row">
+                    <div class="label">Parent / Guardian</div>
+                    <div class="value-secondary" id="parentName">...</div>
+                </div>
+
+                <div class="expiry-box">
+                    <div class="label" style="margin-bottom:0;">Exp:</div>
+                    <div class="expiry-date" id="expiry">...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-container card-back">
+            <div class="back-title">PLAY ON |<span>| MOMBASA MALL</span></div>
+            
+            <div class="info-list">
+                <div class="info-item"><i class="fas fa-map-marker-alt"></i> Mombasa Mall 2nd Floor</div>
+                <div class="info-item"><i class="fas fa-phone"></i> +254 780 611 074</div>
+                <div class="info-item"><i class="fas fa-envelope"></i> playonkenya@gmail.com</div>
+            </div>
+
+            <div class="schedule-grid">
+                <div style="flex:1;">
+                    <h4>Tuesday - Friday</h4>
+                    <div>1st Session : 2:00pm - 4:30pm</div>
+                    <div>2nd Session : 5:00pm - 8:00pm</div>
+                </div>
+                <div style="flex:1;">
+                    <h4>Weekends & Holidays</h4>
+                    <div>1st Session : 11:00am-1:00pm </div>
+                    <div>2nd Session : 2:00pm-4:00pm</div>
+                    <div>3rd Session: 4:30pm-6:30pm </div>
+                    <div>4th Session: 7:00pm-9:00pm</div>
+                </div>
+            </div>
+
+            <div class="footer-socials">
+                <a href="#"><i class="fab fa-instagram"></i> @playon_msa</a>
+                <a href="#"><i class="fab fa-tiktok"></i> @playon_msa</a>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        async function loadCard() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+
+            // --- TEST MODE (Remove this block in production if you only want real data) ---
+            if (!id) {
+                // Mock data to visualize the design immediately
+                fillData({
+                    name: "Emmanuel Nyakundi", // Long name test
+                    parent_name: "Gideon Makai",
+                    qr_code_data: "PO-1767705462",
+                    membership_expiry: "2026-12-31",
+                    photo_path: "https://via.placeholder.com/150"
+                });
+                return; 
+            }
+            // --------------------------------------------------------------------------
+
+            const API_BASE = window.location.pathname.includes('/public/') ? '../api/' : 'api/';
+
+            try {
+                const res = await fetch(`${API_BASE}get_kid.php?id=${id}`);
+                const data = await res.json();
+
+                if (data.kid) {
+                    fillData(data.kid);
+                } else {
+                    document.body.innerHTML = "<h2 style='color:white;'>Member Not Found</h2>";
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function fillData(k) {
+            // Image Logic
+            let photoUrl = k.photo_path || 'https://via.placeholder.com/150';
+            if (k.photo_path && !k.photo_path.startsWith('http')) {
+                const imgPrefix = window.location.pathname.includes('/public/') ? '../' : '';
+                photoUrl = imgPrefix + photoUrl;
+            }
+            document.getElementById('photo').src = photoUrl;
+
+            // Text Data
+            document.getElementById('name').innerText = k.name;
+            document.getElementById('parentName').innerText = k.parent_name;
+            document.getElementById('memberId').innerText = k.qr_code_data;
+            
+            // Date Format
+            const dateObj = new Date(k.membership_expiry);
+            document.getElementById('expiry').innerText = dateObj.toLocaleDateString('en-GB', {
+                day: 'numeric', month: 'short', year: 'numeric'
+            });
+
+            // QR Code
+            document.getElementById('qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(k.qr_code_data)}`;
+        }
+
+        loadCard();
+    </script>
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Members List - Play On</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .members-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .members-table th,
+        .members-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .members-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #555;
+            text-transform: uppercase;
+            font-size: 0.85em;
+        }
+
+        .members-table tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-expired {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1em;
+            margin-right: 8px;
+            color: #666;
+        }
+
+        .action-btn:hover {
+            color: #333;
+        }
+
+        .action-edit:hover {
+            color: #007bff;
+        }
+
+        .action-delete:hover {
+            color: #dc3545;
+        }
+
+        .action-card:hover {
+            color: #28a745;
+        }
+
+        .search-bar {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1 class="play-on-title">PLAY ON</h1>
+            <p>Members Directory</p>
+        </div>
+
+        <div class="nav-bar">
+            <a href="index.html" class="nav-link">Check-In / Dashboard</a>
+            <a href="register.html" class="nav-link">Register New Member</a>
+            <a href="members.html" class="nav-link active">Members List</a>
+        </div>
+
+        <div class="search-bar">
+            <input type="text" id="filterInput" placeholder="Filter by Name, ID, or Phone..." onkeyup="filterTable()">
+        </div>
+
+        <table class="members-table">
+            <thead>
+                <tr>
+                    <th>Member Info</th>
+                    <th>Parent</th>
+                    <th>Membership Ends</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="membersBody">
+                <tr>
+                    <td colspan="5" style="text-align:center;">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+
+    </div>
+
+    <!-- Reuse Edit Modal from index.html approach would be ideal, but for now lets rely on simple actions or just redirect -->
+    <!-- Actually, let's include the edit modal here too for completeness -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2>Edit Member</h2>
+            <input type="hidden" id="editId">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="editName">
+            </div>
+            <div class="form-group">
+                <label>Update Photo</label>
+                <input type="file" id="editPhoto" accept="image/*">
+            </div>
+            <div class="form-group">
+                <label>Parent Name</label>
+                <input type="text" id="editParentName">
+            </div>
+            <div class="form-group">
+                <label>Parent Phone</label>
+                <input type="text" id="editParentPhone">
+            </div>
+            <div class="form-group">
+                <label>Expiry Date</label>
+                <input type="date" id="editExpiry">
+            </div>
+            <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+            <button class="btn btn-secondary"
+                onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // Smart Path
+        const API_BASE = window.location.pathname.includes('/public/') ? '../api/' : 'api/';
+
+        async function loadMembers() {
+            try {
+                const res = await fetch(API_BASE + 'all_members.php');
+                const data = await res.json();
+
+                const tbody = document.getElementById('membersBody');
+                tbody.innerHTML = '';
+
+                if (!data.members || data.members.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No members found.</td></tr>';
+                    return;
+                }
+
+                data.members.forEach(m => {
+                    const tr = document.createElement('tr');
+                    const statusClass = m.status === 'Active' ? 'status-active' : 'status-expired';
+
+                    // Smart Photo Path
+                    let photo = m.photo_path || '#';
+                    if (photo !== '#' && !photo.startsWith('http')) {
+                        const imgPrefix = window.location.pathname.includes('/public/') ? '../' : '';
+                        photo = imgPrefix + photo;
+                    }
+
+                    tr.innerHTML = `
+                    <td style="display:flex; align-items:center; gap:10px;">
+                        <img src="${photo}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
+                        <div>
+                            <div style="font-weight:bold;">${m.name}</div>
+                            <div style="font-size:0.8em; color:#888;">${m.qr_code_data}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div>${m.parent_name}</div>
+                        <div style="font-size:0.8em; color:#888;">${m.parent_phone}</div>
+                    </td>
+                    <td>${m.expiry_formatted}</td>
+                    <td><span class="status-badge ${statusClass}">${m.status}</span></td>
+                    <td>
+                        <button class="action-btn action-card" onclick="openCard(${m.id})" title="View Card"><i class="fas fa-id-card"></i></button>
+                        <button class="action-btn action-edit" onclick="openEdit(${m.id}, '${m.name.replace(/'/g, "\\'")}', '${m.parent_name.replace(/'/g, "\\'")}', '${m.parent_phone}', '${m.membership_expiry}')" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn action-delete" onclick="deleteKid(${m.id})" title="Delete"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                console.error(e);
+                document.getElementById('membersBody').innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error loading list.</td></tr>`;
+            }
+        }
+
+        function filterTable() {
+            const input = document.getElementById("filterInput");
+            const filter = input.value.toUpperCase();
+            const table = document.querySelector(".members-table");
+            const tr = table.getElementsByTagName("tr");
+
+            for (let i = 1; i < tr.length; i++) {
+                let txtValue = tr[i].textContent || tr[i].innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+
+        function openCard(id) {
+            window.open(`card.html?id=${id}`, '_blank');
+        }
+
+        // --- Reuse Edit/Delete Wrappers ---
+        // Note: Ideally these would be in a shared JS file, but for XAMPP simplicity keeping inline.
+
+        function openEdit(id, name, pName, pPhone, expiry) {
+            const datePart = expiry.split(' ')[0];
+            document.getElementById('editId').value = id;
+            document.getElementById('editName').value = name;
+            document.getElementById('editParentName').value = pName;
+            document.getElementById('editParentPhone').value = pPhone;
+            document.getElementById('editExpiry').value = datePart;
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        async function saveEdit() {
+            const id = document.getElementById('editId').value;
+            const name = document.getElementById('editName').value;
+            const parentName = document.getElementById('editParentName').value;
+            const parentPhone = document.getElementById('editParentPhone').value;
+            const expiry = document.getElementById('editExpiry').value;
+            const photoFile = document.getElementById('editPhoto').files[0];
+
+            const formData = new FormData();
+            formData.append('id', id);
+            formData.append('name', name);
+            formData.append('parentName', parentName);
+            formData.append('parentPhone', parentPhone);
+            formData.append('expiry', expiry);
+            if (photoFile) {
+                formData.append('photo', photoFile);
+            }
+
+            const res = await fetch(API_BASE + 'edit_kid.php', {
+                method: 'POST',
+                body: formData // No headers needed, browser handles multipart
+            });
+            const result = await res.json();
+            if (result.success) {
+                alert("Updated!");
+                document.getElementById('editModal').style.display = 'none';
+                loadMembers();
+            } else {
+                alert("Error: " + result.error);
+            }
+        }
+
+        async function deleteKid(id) {
+            if (!confirm("Are you sure?")) return;
+            const res = await fetch(API_BASE + 'delete.php', {
+                method: 'POST',
+                body: JSON.stringify({ type: 'kid', id })
+            });
+            const result = await res.json();
+            if (result.success) loadMembers();
+            else alert("Error: " + result.error);
+        }
+
+        loadMembers();
+    </script>
+
+</body>
+
+</html>

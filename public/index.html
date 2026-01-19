@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Play On</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Toast Notifications */
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            margin-left: -125px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 5px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            bottom: 30px;
+            font-size: 17px;
+        }
+
+        .toast.show {
+            visibility: visible;
+            -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+
+        .toast.success {
+            background-color: var(--primary-green);
+            color: white;
+        }
+
+        .toast.error {
+            background-color: #d32f2f;
+            color: white;
+        }
+
+        @keyframes fadein {
+            from {
+                bottom: 0;
+                opacity: 0;
+            }
+
+            to {
+                bottom: 30px;
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeout {
+            from {
+                bottom: 30px;
+                opacity: 1;
+            }
+
+            to {
+                bottom: 0;
+                opacity: 0;
+            }
+        }
+
+        .action-icon {
+            cursor: pointer;
+            margin-left: 5px;
+            font-size: 1.2em;
+        }
+
+        .action-icon:hover {
+            opacity: 0.7;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1 class="play-on-title">PLAY ON</h1>
+            <p>Attendant Dashboard</p>
+        </div>
+
+        <div class="nav-bar">
+            <a href="index.html" class="nav-link active">Check-In / Dashboard</a>
+            <a href="members.html" class="nav-link">Members List</a>
+            <a href="register.html" class="nav-link">Register New Member</a>
+        </div>
+
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <!-- Left Column: Search & List -->
+            <div style="flex: 2; min-width: 300px;">
+                <h3>Member Search</h3>
+                <div class="form-group" style="display: flex; gap: 10px;">
+                    <input type="text" id="searchInput" placeholder="Search by Name, Phone or QR...">
+                    <button class="btn btn-primary" onclick="searchMembers()">Search</button>
+                </div>
+
+                <div id="resultsArea"></div>
+            </div>
+
+            <!-- Right Column: Quick Actions / Scanner -->
+            <div
+                style="flex: 1; min-width: 300px; text-align: center; border-left: 1px solid #ddd; padding-left: 20px;">
+                <h3>Quick Check-In</h3>
+                <div class="camera-box" style="margin: 0 auto;">
+                    <video id="scanVideo" style="display:none;"></video>
+                    <div id="scanPlaceholder"
+                        style="width:100%; height:100%; background: #eee; display:flex; align-items:center; justify-content:center;">
+                        <p>Camera Off</p>
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <button class="btn btn-secondary" onclick="startScanner()">Start Scanner</button>
+                    <button class="btn btn-primary" onclick="simulateScan()">Simulate Scan (Test)</button>
+                </div>
+
+                <div id="checkInResult" style="margin-top: 20px; padding: 15px; border-radius: 5px; display: none;">
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ccc;">
+            <h3>Daily Stats</h3>
+            <p id="statsDisplay">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2>Edit Member</h2>
+            <input type="hidden" id="editId">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="editName">
+            </div>
+            <div class="form-group">
+                <label>Expiry Date</label>
+                <input type="date" id="editExpiry">
+            </div>
+            <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+            <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast">Message</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script>
+        // SMART PATH DETECTION
+        const API_BASE = window.location.pathname.includes('/public/') ? '../api/' : 'api/';
+
+        function showToast(msg, type = 'success') {
+            const x = document.getElementById("toast");
+            x.innerText = msg;
+            x.className = "toast show " + type;
+            setTimeout(function () { x.className = x.className.replace("show", ""); }, 3000);
+        }
+
+        async function searchMembers() {
+            const q = document.getElementById('searchInput').value;
+
+            const area = document.getElementById('resultsArea');
+            area.innerHTML = ''; // Clear previous results immediately
+
+            try {
+                const res = await fetch(`${API_BASE}members.php?q=${encodeURIComponent(q)}`);
+                if (!res.ok) throw new Error("API Not Found or Server Error");
+
+                const data = await res.json();
+
+                if (data.kids.length === 0 && data.parents.length === 0) {
+                    area.innerHTML = '<p>No members found.</p>';
+                    return;
+                }
+
+                renderResults(data, area);
+            } catch (e) {
+                console.error(e);
+                area.innerHTML = `<p style="color:red">Error connecting to server: ${e.message}</p>`;
+            }
+        }
+
+        function renderResults(data, area) {
+            data.kids.forEach(kid => {
+                const card = document.createElement('div');
+                card.className = 'kid-entry';
+                card.style.display = 'flex';
+                card.style.alignItems = 'center';
+                card.style.gap = '15px';
+
+                const expiry = new Date(kid.membership_expiry).toLocaleDateString();
+
+                // Smart Image Path
+                let photo = kid.photo_path || '#';
+                if (photo !== '#' && !photo.startsWith('http')) {
+                    // If in public, go up to uploads. If in root, just uploads.
+                    const imgPrefix = window.location.pathname.includes('/public/') ? '../' : '';
+                    photo = imgPrefix + photo;
+                }
+
+                card.innerHTML = `
+                <img src="${photo}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 50%; background: #ddd;">
+                <div style="flex: 1;">
+                    <h4>${kid.name} 
+                        <span class="action-icon" onclick="openEdit(${kid.id}, '${kid.name.replace(/'/g, "\\'")}', '${kid.membership_expiry}')">✏️</span>
+                        <span class="action-icon" onclick="deleteKid(${kid.id})">🗑️</span>
+                    </h4>
+                    <small>Parent: ${kid.parent_name} (${kid.parent_phone})</small><br>
+                    <small>Expiry: ${expiry}</small>
+                </div>
+                <div>
+                    <button class="btn btn-secondary" onclick="openCard(${kid.id})">View/Print Card</button>
+                    <button class="btn btn-primary" onclick="manualCheckIn('${kid.qr_code_data}')">Check In</button>
+                </div>
+            `;
+                area.appendChild(card);
+            });
+        }
+
+        // --- Actions ---
+
+        async function manualCheckIn(qrCode) {
+            try {
+                // FIXED: Path to API
+                const res = await fetch('../api/checkin.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ qrCode })
+                });
+                const result = await res.json();
+
+                const display = document.getElementById('checkInResult');
+                display.style.display = 'block';
+
+                if (result.success) {
+                    display.style.backgroundColor = '#d4edda';
+                    display.style.color = '#155724';
+                    display.innerHTML = `<strong>SUCCESS</strong><br>${result.message}<br>Visits: ${result.visitCount}`;
+                    showToast("Check-in Successful!", "success");
+                } else {
+                    display.style.backgroundColor = '#f8d7da';
+                    display.style.color = '#721c24';
+                    display.innerHTML = `<strong>FAILED</strong><br>${result.message}`;
+                    showToast(result.message, "error");
+                }
+                loadStats();
+
+            } catch (err) {
+                showToast("Error checking in", "error");
+            }
+        }
+
+        // --- Edit / Delete ---
+
+        function openEdit(id, name, expiry) {
+            const datePart = expiry.split(' ')[0];
+            document.getElementById('editId').value = id;
+            document.getElementById('editName').value = name;
+            document.getElementById('editExpiry').value = datePart;
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        async function saveEdit() {
+            const id = document.getElementById('editId').value;
+            const name = document.getElementById('editName').value;
+            const expiry = document.getElementById('editExpiry').value;
+
+            // FIXED: Path to API
+            const res = await fetch('../api/edit_kid.php', {
+                method: 'POST',
+                body: JSON.stringify({ id, name, expiry })
+            });
+            const result = await res.json();
+            if (result.success) {
+                showToast("Member updated successfully");
+                closeEditModal();
+                searchMembers(); // Refresh list
+            } else {
+                showToast("Update failed: " + result.error, "error");
+            }
+        }
+
+        async function deleteKid(id) {
+            if (!confirm("Are you sure you want to delete this member? All visits history will be lost.")) return;
+
+            // FIXED: Path to API
+            const res = await fetch('../api/delete.php', {
+                method: 'POST',
+                body: JSON.stringify({ type: 'kid', id })
+            });
+            const result = await res.json();
+            if (result.success) {
+                showToast("Member deleted");
+                searchMembers(); // Refresh list
+            } else {
+                showToast("Delete failed: " + result.error, "error");
+            }
+        }
+
+        function openCard(id) {
+            window.open(`card.html?id=${id}`, '_blank');
+        }
+
+        async function loadStats() {
+            // FIXED: Path to API
+            const res = await fetch('../api/get_kid.php?stats=1');
+            const data = await res.json();
+            document.getElementById('statsDisplay').innerHTML = `Total Members: <strong>${data.totalKids}</strong> | Visits Today: <strong>${data.todayVisits}</strong>`;
+        }
+
+        // --- Scanner Logic ---
+        let videoStream = null;
+        let scanInterval = null;
+
+        function startScanner() {
+            const video = document.getElementById('scanVideo');
+            const placeholder = document.getElementById('scanPlaceholder');
+
+            // UI Updates
+            placeholder.style.display = 'none';
+            video.style.display = 'block';
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(stream => {
+                    videoStream = stream;
+                    video.srcObject = stream;
+                    video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
+                    video.play();
+                    requestAnimationFrame(tick);
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Camera Error: " + err.message);
+                    stopScanner();
+                });
+        }
+
+        function tick() {
+            const video = document.getElementById('scanVideo');
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                const canvas = document.createElement("canvas");
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert",
+                });
+
+                if (code) {
+                    // Found a QR code!
+                    stopScanner();
+
+                    // Audio Beep
+                    const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                    audio.play().catch(e => { });
+
+                    // Determine intent: The user mentioned "ease to look for data".
+                    // If we scan, let's Auto-Search AND Check-in?
+                    // For "Quick Check-in" box, usually we just check in.
+
+                    // Let's populate search box too so they see WHO it is
+                    document.getElementById('searchInput').value = code.data;
+                    searchMembers(); // Show details on left
+
+                    // Trigger Check-in
+                    manualCheckIn(code.data);
+                    return;
+                }
+            }
+            if (videoStream) requestAnimationFrame(tick);
+        }
+
+        function stopScanner() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            document.getElementById('scanVideo').style.display = 'none';
+            document.getElementById('scanPlaceholder').style.display = 'flex';
+        }
+
+        function simulateScan() {
+            const qr = prompt("Enter QR Code data:");
+            if (qr) {
+                document.getElementById('searchInput').value = qr;
+                searchMembers();
+                manualCheckIn(qr);
+            }
+        }
+        // Auto load stats and refresh every 30s
+        loadStats();
+        setInterval(loadStats, 30000);
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Play On</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1 class="play-on-title">PLAY ON</h1>
+            <p>Membership Registration</p>
+        </div>
+
+        <div class="nav-bar">
+            <a href="index.html" class="nav-link">Check-In / Dashboard</a>
+            <a href="members.html" class="nav-link">Members List</a>
+            <a href="register.html" class="nav-link active">Register New Member</a>
+        </div>
+
+        <form id="regForm">
+            <h3>Parent Information</h3>
+            <div class="form-group">
+                <label>Parent Name</label>
+                <input type="text" name="parentName" required>
+            </div>
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" id="parentPhone" name="parentPhone" required>
+            </div>
+
+            <hr>
+            <h3>Kids</h3>
+            <div id="kidsContainer"></div>
+            <button type="button" class="btn btn-secondary" onclick="addKid()">+ Add Kid</button>
+
+            <hr>
+            <h3>Payment</h3>
+            <div class="form-group">
+                <label>Payment Method</label>
+                <select id="paymentMethod" onchange="toggleMpesa(this)">
+                    <option value="cash">Cash</option>
+                    <option value="mpesa">Mpesa</option>
+                </select>
+            </div>
+
+            <!-- Mpesa Prompt Modal -->
+            <div id="mpesaModal" class="modal">
+                <div class="modal-content">
+                    <h2>Mpesa Payment</h2>
+                    <p>Please withdraw cash from agent on your phone.</p>
+                    <p><strong>Agent Number:</strong> 096485</p>
+                    <p><strong>Store Number:</strong> 476877</p>
+                    <p>Sending prompt to <span id="mpesaPhoneDisplay"></span>...</p>
+                    <button type="button" class="btn btn-primary" onclick="closeModal()">Done / Confirmed</button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary"
+                style="width: 100%; margin-top: 20px; font-size: 1.2em;">Complete Registration</button>
+        </form>
+    </div>
+
+    <script>
+        let kidCount = 0;
+
+        function addKid() {
+            const div = document.createElement('div');
+            div.className = 'kid-entry';
+            div.innerHTML = `
+            <h4>Kid ${kidCount + 1}</h4>
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" name="kidName_${kidCount}" required>
+            </div>
+            <div class="form-group">
+                <label>Age</label>
+                <input type="number" name="kidAge_${kidCount}" placeholder="e.g. 5" required style="width:100px;">
+            </div>
+            <div class="form-group">
+                <label>Photo</label>
+                <div class="camera-box">
+                    <video id="kVideo${kidCount}" autoplay></video>
+                    <canvas id="kCanvas${kidCount}" style="display:none;"></canvas>
+                </div>
+                <div class="capture-controls">
+                    <button type="button" class="btn btn-secondary" onclick="startCamera('kVideo${kidCount}')">
+                        <i class="fas fa-camera"></i> Start Camera
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="capture('kVideo${kidCount}', 'kCanvas${kidCount}', 'kInput${kidCount}')">
+                        <i class="fas fa-dot-circle"></i> Capture
+                    </button>
+                    
+                    <!-- NEW: Upload Option -->
+                    <input type="file" id="kUploadInput${kidCount}" accept="image/*" style="display:none" onchange="handleFileUpload(this, 'kVideo${kidCount}', 'kCanvas${kidCount}', 'kInput${kidCount}', 'kStatus${kidCount}')">
+                    <button type="button" class="btn btn-secondary" style="background:#444;" onclick="document.getElementById('kUploadInput${kidCount}').click()">
+                        <i class="fas fa-upload"></i> Upload File
+                    </button>
+                </div>
+                <input type="hidden" name="kidPhoto_${kidCount}" id="kInput${kidCount}">
+                <span id="kStatus${kidCount}"></span>
+            </div>
+        `;
+            document.getElementById('kidsContainer').appendChild(div);
+            kidCount++;
+        }
+
+        // Initialize with 1 kid
+        addKid();
+
+        function startCamera(videoId) {
+            // Stop any existing stream before starting a new one
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    videoStream = stream; // Store the current stream
+                    const video = document.getElementById(videoId);
+                    video.style.display = 'block';
+                    video.srcObject = stream;
+                    video.play();
+
+                    // Hide canvas and clear status for this specific kid's photo section
+                    const canvasId = videoId.replace('Video', 'Canvas');
+                    const statusId = videoId.replace('Video', 'Status');
+                    document.getElementById(canvasId).style.display = 'none';
+                    const statusEl = document.getElementById(statusId);
+                    if (statusEl) {
+                        statusEl.innerText = '';
+                    }
+                })
+                .catch(err => alert("Camera error: " + err));
+        }
+
+        function capture(videoId, canvasId, inputId) {
+            const video = document.getElementById(videoId);
+            const canvas = document.getElementById(canvasId);
+            const input = document.getElementById(inputId);
+
+            // Check if video is actually ready
+            if (video.readyState < 2 || !video.videoWidth) {
+                alert("Camera still loading... please wait 1 second.");
+                return;
+            }
+
+            try {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                canvas.style.maxWidth = "100%";
+                canvas.style.height = "auto";
+                canvas.style.borderRadius = "8px";
+
+                input.value = canvas.toDataURL('image/jpeg', 0.95);
+
+                const stream = video.srcObject;
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+
+                // Update status
+                const statusId = videoId.replace('Video', 'Status');
+                const statusEl = document.getElementById(statusId);
+                if (statusEl) {
+                    statusEl.innerText = " Photo Captured!";
+                    statusEl.style.color = "green";
+                    statusEl.style.fontWeight = "bold";
+                }
+
+                video.style.display = 'none';
+                canvas.style.display = 'block';
+            } catch (e) {
+                console.error(e);
+                alert("Capture error: " + e.message);
+            }
+        }
+
+        function toggleMpesa(select) {
+            if (select.value === 'mpesa') {
+                const phone = document.getElementById('parentPhone').value;
+                if (!phone) {
+                    alert("Please enter parent phone number first.");
+                    select.value = 'cash';
+                    return;
+                }
+                document.getElementById('mpesaPhoneDisplay').innerText = phone;
+                document.getElementById('mpesaModal').style.display = 'block';
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('mpesaModal').style.display = 'none';
+        }
+
+        document.getElementById('regForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData();
+            const rawData = Object.fromEntries(new FormData(e.target));
+
+            // Append text fields
+            for (const key in rawData) {
+                if (!key.includes('Photo')) { // Skip photo inputs here, handle specially
+                    formData.append(key, rawData[key]);
+                }
+            }
+
+            // Handle Base64 photos -> Blob
+            async function appendPhoto(key, dataUrl) {
+                if (dataUrl && dataUrl.startsWith('data:')) {
+                    const res = await fetch(dataUrl);
+                    const blob = await res.blob();
+                    formData.append(key, blob, key + '.jpg');
+                }
+            }
+
+            await appendPhoto('parentPhoto', rawData.parentPhoto);
+
+            for (let i = 0; i < kidCount; i++) {
+                await appendPhoto(`kidPhoto_${i}`, rawData[`kidPhoto_${i}`]);
+            }
+
+            // SMART PATH DETECTION
+            // If we are in 'public' folder, go up one level. Otherwise assume we are in root.
+            const API_BASE = window.location.pathname.includes('/public/') ? '../api/' : 'api/';
+
+            try {
+                // Use API_BASE constant
+                const res = await fetch(API_BASE + 'register.php', { method: 'POST', body: formData });
+                // Check for HTTP error codes
+                if (!res.ok) throw new Error(`Server returned ${res.status} ${res.statusText}`);
+
+                const result = await res.json();
+                if (result.success) {
+                    alert("Registration Successful!");
+                    window.location.href = 'index.html';
+                } else {
+                    alert("Error: " + result.error);
+                }
+            } catch (err) {
+                console.error(err);
+                if (window.location.protocol === 'file:') {
+                    alert("ERROR: You are opening this via file://. Please use http://localhost/...");
+                } else {
+                    // Show exact URL we tried to help debugging
+                    const targetUrl = new URL(API_BASE + 'register.php', window.location.href).href;
+                    alert(`Network Error.\nAttempted to reach: ${targetUrl}\n\nEnsure XAMPP is running and 'api' folder exists.`);
+                }
+            }
+        });
+    </script>
+
+</body>
+
+</html>
