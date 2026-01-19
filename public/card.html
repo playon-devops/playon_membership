@@ -2,17 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Play On Membership Card - High Contrast</title>
+    <title>Play On Membership Card</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <style>
         :root {
             /* BRAND COLORS */
             --lime-green: #32CD32;
-            --forest-green: #006400; /* Darker for text contrast */
+            --forest-green: #006400; 
             --bright-yellow: #FFD700;
             --dark-grey: #1a1a1a;
-            --light-bg: #f8f9fa;
             
             /* DIMENSIONS (CR80 Standard) */
             --card-width: 85.6mm;
@@ -30,19 +33,58 @@
             min-height: 100vh;
         }
 
-        .no-print { text-align: center; color: white; margin-bottom: 20px; }
-        .print-btn {
+        /* --- CONTROL PANEL --- */
+        .control-panel {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .action-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+        }
+
+        .btn-pdf {
+            background: #e74c3c;
+            color: white;
+            box-shadow: 0 4px 0 #c0392b;
+        }
+
+        .btn-png {
             background: var(--lime-green);
             color: var(--forest-green);
-            border: none;
-            padding: 10px 20px;
-            font-weight: 800;
-            border-radius: 4px;
-            cursor: pointer;
-            text-transform: uppercase;
             box-shadow: 0 4px 0 var(--forest-green);
         }
-        .print-btn:active { transform: translateY(4px); box-shadow: none; }
+
+        .action-btn:active {
+            transform: translateY(4px);
+            box-shadow: none !important;
+        }
+
+        .action-btn:disabled {
+            background: #7f8c8d;
+            color: #bdc3c7;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
 
         .cards-wrapper {
             display: flex;
@@ -54,16 +96,19 @@
         .card-container {
             width: var(--card-width);
             height: var(--card-height);
-            border-radius: 3.18mm; /* Standard ID radius */
+            border-radius: 3.18mm;
             position: relative;
             overflow: hidden;
             background: #fff;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
             box-sizing: border-box;
+            /* Ensure exact print rendering */
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact; 
         }
 
         /* ============================
-           FRONT CARD DESIGN (Polished)
+           FRONT CARD DESIGN
            ============================ */
         .card-front {
             display: flex;
@@ -71,7 +116,6 @@
             border: 1px solid #ddd;
         }
 
-        /* DECORATIVE CURVES */
         .front-decor-top {
             position: absolute;
             top: 0;
@@ -95,16 +139,16 @@
             z-index: 0;
         }
 
-        /* LEFT SIDE (Photo & QR) */
+        /* LEFT SIDE */
         .front-left {
-            width: 36%; /* Slightly narrower to give text space */
+            width: 36%;
             padding: 4mm;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 2;
-            border-right: 1px dashed #ddd; /* Subtle separation */
+            border-right: 1px dashed #ddd;
         }
 
         .photo-container {
@@ -115,6 +159,7 @@
             border-radius: 50%;
             margin-bottom: 6px;
             background: white;
+            overflow: hidden;
         }
         .profile-img {
             width: 100%;
@@ -128,15 +173,15 @@
             padding: 2px;
         }
         .qr-img {
-            width: 60px;
-            height: 60px;
+            width: 42px;
+            height: 42px;
             display: block;
         }
 
-        /* RIGHT SIDE (Text Data) */
+        /* RIGHT SIDE */
         .front-right {
             width: 64%;
-            padding: 4mm 4mm 4mm 3mm; /* Top, Right, Bottom, Left */
+            padding: 4mm 4mm 4mm 3mm;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -158,7 +203,7 @@
             font-size: 14px;
             font-weight: 900;
             color: var(--forest-green);
-            font-style: bold;
+            font-style: italic;
             letter-spacing: -0.5px;
             text-transform: uppercase;
         }
@@ -175,9 +220,7 @@
         }
 
         /* DATA FIELDS */
-        .data-row {
-            margin-bottom: 3px;
-        }
+        .data-row { margin-bottom: 3px; }
 
         .label {
             font-size: 6px;
@@ -189,7 +232,7 @@
         }
 
         .value-primary {
-            font-size: 15px; /* Big Name */
+            font-size: 15px;
             font-weight: 800;
             color: var(--dark-grey);
             line-height: 1.1;
@@ -231,7 +274,7 @@
         .expiry-date {
             font-size: 10px;
             font-weight: 800;
-            color: #c0392b; /* Red for expiry to grab attention */
+            color: #c0392b;
         }
 
         /* ============================
@@ -246,7 +289,7 @@
             justify-content: center;
             padding: 5mm;
             text-align: center;
-            border-bottom: 4px solid var(--lime-green); /* Visual anchor */
+            border-bottom: 4px solid var(--lime-green);
         }
 
         .back-title {
@@ -297,47 +340,40 @@
         .footer-socials a { color: white; text-decoration: none; }
         .footer-socials i { color: var(--lime-green); }
 
-        /* PRINT SETTINGS */
-        @media print {
-            body { background: none; margin: 0; padding: 0; display: block; }
-            .no-print { display: none; }
-            .cards-wrapper { flex-direction: row; flex-wrap: wrap; gap: 0; }
-            .card-container {
-                margin: 0 10px 10px 0;
-                box-shadow: none;
-                border: 1px solid #eee; /* Light cutting guide */
-                page-break-inside: avoid;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-        }
     </style>
 </head>
 <body>
 
-    <div class="no-print">
-        <button onclick="window.print()" class="print-btn">Print Card</button>
-        <div style="font-size: 11px; margin-top: 8px; opacity: 0.7;">Ensure background graphics are enabled in print settings.</div>
+    <div class="control-panel no-print">
+        <button onclick="downloadPDF()" id="btn-pdf" class="action-btn btn-pdf" disabled>
+            <i class="fas fa-file-pdf"></i> Download PDF
+        </button>
+        <button onclick="downloadPNG('front')" id="btn-front" class="action-btn btn-png" disabled>
+            <i class="fas fa-image"></i> Save Front PNG
+        </button>
+        <button onclick="downloadPNG('back')" id="btn-back" class="action-btn btn-png" disabled>
+            <i class="fas fa-image"></i> Save Back PNG
+        </button>
     </div>
 
     <div class="cards-wrapper">
         
-        <div class="card-container card-front">
+        <div class="card-container card-front" id="card-front-el">
             <div class="front-decor-top"></div>
             <div class="front-decor-bottom"></div>
 
             <div class="front-left">
                 <div class="photo-container">
-                    <img id="photo" class="profile-img" src="" alt="Profile">
+                    <img id="photo" class="profile-img" src="" alt="Profile" crossorigin="anonymous">
                 </div>
                 <div class="qr-container">
-                    <img id="qr" class="qr-img" src="" alt="QR">
+                    <img id="qr" class="qr-img" src="" alt="QR" crossorigin="anonymous">
                 </div>
             </div>
 
             <div class="front-right">
                 <div class="card-header">
-                    <div class="brand-title">PLAY ON MEMBERSHIP CARD</div>
+                    <div class="brand-title">PLAY ON</div>
                     <div class="card-type">MEMBER</div>
                 </div>
 
@@ -347,12 +383,12 @@
                 </div>
 
                 <div class="data-row">
-                    <div class="label">Membership NO.</div>
+                    <div class="label">ID NO.</div>
                     <div class="id-badge" id="memberId">PO-....</div>
                 </div>
 
                 <div class="data-row">
-                    <div class="label">Parent / Guardian</div>
+                    <div class="label">Guardian</div>
                     <div class="value-secondary" id="parentName">...</div>
                 </div>
 
@@ -363,8 +399,8 @@
             </div>
         </div>
 
-        <div class="card-container card-back">
-            <div class="back-title">PLAY ON |<span>| MOMBASA MALL</span></div>
+        <div class="card-container card-back" id="card-back-el">
+            <div class="back-title">PLAY ON <span>MOMBASA</span></div>
             
             <div class="info-list">
                 <div class="info-item"><i class="fas fa-map-marker-alt"></i> Mombasa Mall 2nd Floor</div>
@@ -374,16 +410,14 @@
 
             <div class="schedule-grid">
                 <div style="flex:1;">
-                    <h4>Tuesday - Friday</h4>
-                    <div>1st Session : 2:00pm - 4:30pm</div>
-                    <div>2nd Session : 5:00pm - 8:00pm</div>
+                    <h4>TUE - FRI</h4>
+                    <div>1st: 2:00pm - 4:30pm</div>
+                    <div>2nd: 5:00pm - 8:00pm</div>
                 </div>
                 <div style="flex:1;">
-                    <h4>Weekends & Holidays</h4>
-                    <div>1st Session : 11:00am-1:00pm </div>
-                    <div>2nd Session : 2:00pm-4:00pm</div>
-                    <div>3rd Session: 4:30pm-6:30pm </div>
-                    <div>4th Session: 7:00pm-9:00pm</div>
+                    <h4>WKNDS & HOLIDAYS</h4>
+                    <div>11am-1pm | 2pm-4pm</div>
+                    <div>4:30pm-6:30pm | 7pm-9pm</div>
                 </div>
             </div>
 
@@ -396,15 +430,17 @@
     </div>
 
     <script>
+        // Global storage for loaded data
+        let memberData = {};
+
         async function loadCard() {
             const urlParams = new URLSearchParams(window.location.search);
             const id = urlParams.get('id');
 
-            // --- TEST MODE (Remove this block in production if you only want real data) ---
+            // --- TEST MODE: REMOVE IN PRODUCTION IF NEEDED ---
             if (!id) {
-                // Mock data to visualize the design immediately
                 fillData({
-                    name: "Emmanuel Nyakundi", // Long name test
+                    name: "Emmanuel Nyakundi",
                     parent_name: "Gideon Makai",
                     qr_code_data: "PO-1767705462",
                     membership_expiry: "2026-12-31",
@@ -412,7 +448,7 @@
                 });
                 return; 
             }
-            // --------------------------------------------------------------------------
+            // -------------------------------------------------
 
             const API_BASE = window.location.pathname.includes('/public/') ? '../api/' : 'api/';
 
@@ -431,27 +467,88 @@
         }
 
         function fillData(k) {
-            // Image Logic
+            memberData = k;
+
+            // Image Handling
             let photoUrl = k.photo_path || 'https://via.placeholder.com/150';
             if (k.photo_path && !k.photo_path.startsWith('http')) {
                 const imgPrefix = window.location.pathname.includes('/public/') ? '../' : '';
                 photoUrl = imgPrefix + photoUrl;
             }
-            document.getElementById('photo').src = photoUrl;
+            
+            // NOTE: 'crossorigin' is added to img tags to allow html2canvas to read them
+            const photoEl = document.getElementById('photo');
+            photoEl.src = photoUrl;
 
             // Text Data
             document.getElementById('name').innerText = k.name;
             document.getElementById('parentName').innerText = k.parent_name;
             document.getElementById('memberId').innerText = k.qr_code_data;
             
-            // Date Format
             const dateObj = new Date(k.membership_expiry);
             document.getElementById('expiry').innerText = dateObj.toLocaleDateString('en-GB', {
                 day: 'numeric', month: 'short', year: 'numeric'
             });
 
-            // QR Code
-            document.getElementById('qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(k.qr_code_data)}`;
+            const qrEl = document.getElementById('qr');
+            qrEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(k.qr_code_data)}`;
+
+            // Enable buttons only after images load to prevent blank exports
+            Promise.all([
+                new Promise(resolve => photoEl.onload = resolve),
+                new Promise(resolve => qrEl.onload = resolve)
+            ]).then(() => {
+                document.getElementById('btn-pdf').disabled = false;
+                document.getElementById('btn-front').disabled = false;
+                document.getElementById('btn-back').disabled = false;
+            }).catch(() => {
+                // Fallback if images fail, still enable buttons
+                document.getElementById('btn-pdf').disabled = false;
+                document.getElementById('btn-front').disabled = false;
+                document.getElementById('btn-back').disabled = false;
+            });
+        }
+
+        // --- PDF GENERATION LOGIC ---
+        async function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: [85.6, 53.98] // Exact CR80 Card Size
+            });
+
+            // Capture Front
+            const frontCanvas = await html2canvas(document.getElementById('card-front-el'), { scale: 4, useCORS: true });
+            const frontImg = frontCanvas.toDataURL('image/png');
+            
+            // Add Front Image to Page 1
+            doc.addImage(frontImg, 'PNG', 0, 0, 85.6, 53.98);
+
+            // Capture Back
+            const backCanvas = await html2canvas(document.getElementById('card-back-el'), { scale: 4, useCORS: true });
+            const backImg = backCanvas.toDataURL('image/png');
+
+            // Add Page 2
+            doc.addPage();
+            doc.addImage(backImg, 'PNG', 0, 0, 85.6, 53.98);
+
+            // Save
+            doc.save(`${memberData.name || 'Member'}_Card.pdf`);
+        }
+
+        // --- PNG GENERATION LOGIC ---
+        async function downloadPNG(side) {
+            const elId = side === 'front' ? 'card-front-el' : 'card-back-el';
+            const element = document.getElementById(elId);
+            
+            // Use high scale for crisp printing
+            const canvas = await html2canvas(element, { scale: 4, useCORS: true });
+            
+            const link = document.createElement('a');
+            link.download = `${memberData.name || 'Member'}_${side}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
         }
 
         loadCard();
