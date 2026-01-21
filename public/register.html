@@ -67,6 +67,45 @@
 
     <script>
         let kidCount = 0;
+        // Global stream holder to avoid ReferenceError when starting/stopping cameras
+        let videoStream = null;
+
+        // Handle file uploads as fallback when camera is unavailable
+        function handleFileUpload(fileInput, videoId, canvasId, inputId, statusId) {
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const dataUrl = e.target.result;
+
+                // Set hidden input value (base64) so server can receive image
+                const hidden = document.getElementById(inputId);
+                if (hidden) hidden.value = dataUrl;
+
+                // Draw to canvas for preview
+                const canvas = document.getElementById(canvasId);
+                const img = new Image();
+                img.onload = function () {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    canvas.style.display = 'block';
+                    const video = document.getElementById(videoId);
+                    if (video) video.style.display = 'none';
+                };
+                img.src = dataUrl;
+
+                const statusEl = document.getElementById(statusId);
+                if (statusEl) {
+                    statusEl.innerText = ' File selected';
+                    statusEl.style.color = 'green';
+                    statusEl.style.fontWeight = 'bold';
+                }
+            };
+            reader.readAsDataURL(file);
+        }
 
         function addKid() {
             const div = document.createElement('div');

@@ -141,7 +141,7 @@
 
         /* LEFT SIDE */
         .front-left {
-            width: 36%;
+            width: 40%;
             padding: 4mm;
             display: flex;
             flex-direction: column;
@@ -152,12 +152,12 @@
         }
 
         .photo-container {
-            width: 48px;
-            height: 48px;
-            padding: 2px;
-            border: 2px solid var(--lime-green);
+            width: 72px;
+            height: 72px;
+            padding: 3px;
+            border: 3px solid var(--lime-green);
             border-radius: 50%;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             background: white;
             overflow: hidden;
         }
@@ -170,11 +170,12 @@
 
         .qr-container {
             background: white;
-            padding: 2px;
+            padding: 4px;
+            margin-top: 6px;
         }
         .qr-img {
-            width: 42px;
-            height: 42px;
+            width: 64px;
+            height: 64px;
             display: block;
         }
 
@@ -203,7 +204,7 @@
             font-size: 14px;
             font-weight: 900;
             color: var(--forest-green);
-            font-style: italic;
+            
             letter-spacing: -0.5px;
             text-transform: uppercase;
         }
@@ -354,6 +355,12 @@
         <button onclick="downloadPNG('back')" id="btn-back" class="action-btn btn-png" disabled>
             <i class="fas fa-image"></i> Save Back PNG
         </button>
+        <button onclick="downloadSVG('front')" id="btn-svg-front" class="action-btn" disabled>
+            <i class="fas fa-file-code"></i> Save Front SVG
+        </button>
+        <button onclick="downloadSVG('back')" id="btn-svg-back" class="action-btn" disabled>
+            <i class="fas fa-file-code"></i> Save Back SVG
+        </button>
     </div>
 
     <div class="cards-wrapper">
@@ -373,7 +380,8 @@
 
             <div class="front-right">
                 <div class="card-header">
-                    <div class="brand-title">PLAY ON</div>
+                    <div class="brand-title">PLAY ON MEMBERSHIP CARD</div>
+                    
                     <div class="card-type">MEMBER</div>
                 </div>
 
@@ -400,7 +408,7 @@
         </div>
 
         <div class="card-container card-back" id="card-back-el">
-            <div class="back-title">PLAY ON <span>MOMBASA</span></div>
+            <div class="back-title">PLAY ON |<span>| MOMBASA MALL</span></div>
             
             <div class="info-list">
                 <div class="info-item"><i class="fas fa-map-marker-alt"></i> Mombasa Mall 2nd Floor</div>
@@ -411,19 +419,22 @@
             <div class="schedule-grid">
                 <div style="flex:1;">
                     <h4>TUE - FRI</h4>
-                    <div>1st: 2:00pm - 4:30pm</div>
-                    <div>2nd: 5:00pm - 8:00pm</div>
+                    <div>1st Session: 2:00pm - 4:30pm</div>
+                    <div>2nd Session: 5:00pm - 8:00pm</div>
                 </div>
                 <div style="flex:1;">
-                    <h4>WKNDS & HOLIDAYS</h4>
-                    <div>11am-1pm | 2pm-4pm</div>
-                    <div>4:30pm-6:30pm | 7pm-9pm</div>
+                    <h4>WEEKENDS & HOLIDAYS</h4>
+                    <div>1st Session: 11:00am-1:00pm </div>
+                    <div>2nd Session: 2:00pm-4:00pm</div>
+                    <div>3rd Session: 4:30pm-6:30pm </div>
+                    <div>4th Session: 7:00pm-9:00pm</div>
                 </div>
             </div>
 
             <div class="footer-socials">
                 <a href="#"><i class="fab fa-instagram"></i> @playon_msa</a>
                 <a href="#"><i class="fab fa-tiktok"></i> @playon_msa</a>
+                <a href="#"><i class="fab fa-facebook"></i> Play On Mombasa Mall.</a>
             </div>
         </div>
 
@@ -501,11 +512,15 @@
                 document.getElementById('btn-pdf').disabled = false;
                 document.getElementById('btn-front').disabled = false;
                 document.getElementById('btn-back').disabled = false;
+                document.getElementById('btn-svg-front').disabled = false;
+                document.getElementById('btn-svg-back').disabled = false;
             }).catch(() => {
                 // Fallback if images fail, still enable buttons
                 document.getElementById('btn-pdf').disabled = false;
                 document.getElementById('btn-front').disabled = false;
                 document.getElementById('btn-back').disabled = false;
+                document.getElementById('btn-svg-front').disabled = false;
+                document.getElementById('btn-svg-back').disabled = false;
             });
         }
 
@@ -549,6 +564,32 @@
             link.download = `${memberData.name || 'Member'}_${side}.png`;
             link.href = canvas.toDataURL();
             link.click();
+        }
+
+        // --- SVG GENERATION (embeds PNG inside SVG for compatibility) ---
+        async function downloadSVG(side) {
+            const elId = side === 'front' ? 'card-front-el' : 'card-back-el';
+            const element = document.getElementById(elId);
+
+            // Render element to canvas first (reliable cross-browser)
+            const canvas = await html2canvas(element, { scale: 4, useCORS: true });
+            const imgData = canvas.toDataURL('image/png');
+
+            const svgWidth = canvas.width;
+            const svgHeight = canvas.height;
+
+            const svg = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">\n  <image href="${imgData}" width="${svgWidth}" height="${svgHeight}" preserveAspectRatio="xMidYMid meet"/>\n</svg>`;
+
+            const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${memberData.name || 'Member'}_${side}.svg`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
         }
 
         loadCard();
